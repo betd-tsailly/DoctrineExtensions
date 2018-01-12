@@ -6,8 +6,10 @@ use Doctrine\Common\Proxy\Proxy;
 use Doctrine\DBAL\Types\Type;
 use Doctrine\ORM\Mapping\ClassMetadataInfo;
 use Gedmo\Mapping\Event\Adapter\ORM as BaseAdapterORM;
+use Gedmo\Tool\WrapperInterface;
 use Gedmo\Translatable\Mapping\Event\TranslatableAdapter;
 use Gedmo\Tool\Wrapper\AbstractWrapper;
+use Gedmo\Translatable\TranslatableIdentifierInterface;
 
 /**
  * Doctrine event adapter for ORM adapted
@@ -81,7 +83,7 @@ final class ORM extends BaseAdapterORM implements TranslatableAdapter
             }
         } else {
             // load translated content for all translatable fields
-            $objectId = $this->foreignKey($wrapped->getIdentifier(), $translationClass);
+            $objectId = $this->getWrappedObjectId($wrapped, $translationClass);
             // construct query
             $dql = 'SELECT t.content, t.field FROM '.$translationClass.' t';
             $dql .= ' WHERE t.foreignKey = :objectId';
@@ -137,7 +139,8 @@ final class ORM extends BaseAdapterORM implements TranslatableAdapter
                         if ($this->usesPersonalTranslation($translationClass)) {
                             $isRequestedTranslation = $trans->getObject() === $wrapped->getObject();
                         } else {
-                            $objectId = $this->foreignKey($wrapped->getIdentifier(), $translationClass);
+                            $objectId = $this->getWrappedObjectId($wrapped, $translationClass);
+
                             $isRequestedTranslation = $trans->getForeignKey() === $objectId
                                 && $trans->getObjectClass() === $wrapped->getMetadata()->name
                             ;
@@ -169,7 +172,8 @@ final class ORM extends BaseAdapterORM implements TranslatableAdapter
         } else {
             $qb->andWhere('trans.foreignKey = :objectId');
             $qb->andWhere('trans.objectClass = :objectClass');
-            $qb->setParameter('objectId', $this->foreignKey($wrapped->getIdentifier(), $translationClass));
+            $objectId = $this->getWrappedObjectId($wrapped, $translationClass);
+            $qb->setParameter('objectId', $objectId);
             $qb->setParameter('objectClass', $objectClass);
         }
         $q = $qb->getQuery();
@@ -201,7 +205,8 @@ final class ORM extends BaseAdapterORM implements TranslatableAdapter
                 'trans.foreignKey = :objectId',
                 'trans.objectClass = :class'
             );
-            $qb->setParameter('objectId', $this->foreignKey($wrapped->getIdentifier(), $transClass));
+            $objectId = $this->getWrappedObjectId($wrapped, $transClass);
+            $qb->setParameter('objectId', $objectId);
             $qb->setParameter('class', $objectClass);
         }
 
@@ -256,5 +261,24 @@ final class ORM extends BaseAdapterORM implements TranslatableAdapter
         $type = Type::getType($meta->getTypeOfField($field));
         $value = $type->convertToPHPValue($value, $em->getConnection()->getDatabasePlatform());
         $wrapped->setPropertyValue($field, $value);
+    }
+
+    /**
+     * Get foreign key from an object
+     *
+     * @param WrapperInterface $wrapper
+     * @param string           $translationClass
+     *
+     * @return string
+     */
+    private function getWrappedObjectId(WrapperInterface $wrapper, $translationClass)
+    {
+        if ($wrapper->getObject() instanceof TranslatableIdentifierInterface) {
+            $objectId = $this->foreignKey($wrapper->getObject()->getTranslatableId(), $translationClass);
+        } else {
+            $objectId = $this->foreignKey($wrapper->getIdentifier(), $translationClass);
+        }
+
+        return $objectId;
     }
 }

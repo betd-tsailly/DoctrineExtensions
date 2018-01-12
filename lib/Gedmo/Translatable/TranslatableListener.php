@@ -421,7 +421,11 @@ class TranslatableListener extends MappedEventSubscriber
             if (array_key_exists($oid, $this->pendingTranslationInserts)) {
                 // load the pending translations without key
                 $wrapped = AbstractWrapper::wrap($object, $om);
-                $objectId = $wrapped->getIdentifier();
+                if ($wrapped->getObject() instanceof TranslatableIdentifierInterface) {
+                    $objectId = $wrapped->getObject()->getTranslatableId();
+                } else {
+                    $objectId = $wrapped->getIdentifier();
+                }
                 $translationClass = $this->getTranslationClass($ea, get_class($object));
                 foreach ($this->pendingTranslationInserts[$oid] as $translation) {
                     if ($ea->usesPersonalTranslation($translationClass)) {
@@ -552,7 +556,11 @@ class TranslatableListener extends MappedEventSubscriber
         $translationMetadata = $om->getClassMetadata($translationClass);
 
         // check for the availability of the primary key
-        $objectId = $wrapped->getIdentifier();
+        if ($wrapped->getObject() instanceof TranslatableIdentifierInterface) {
+            $objectId = $wrapped->getObject()->getTranslatableId();
+        } else {
+            $objectId = $wrapped->getIdentifier();
+        }
         // load the currently used locale
         $locale = $this->getTranslatableLocale($object, $meta, $om);
 

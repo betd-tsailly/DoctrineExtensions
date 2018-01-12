@@ -2,6 +2,8 @@
 
 namespace Gedmo\Translatable\Entity\Repository;
 
+use Doctrine\ORM\Mapping\MappingException;
+use Gedmo\Translatable\TranslatableIdentifierInterface;
 use Gedmo\Translatable\TranslatableListener;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Query;
@@ -71,7 +73,11 @@ class TranslationRepository extends EntityRepository
                 $ea = new TranslatableAdapterORM();
                 $class = $listener->getTranslationClass($ea, $config['useObjectClass']);
             }
-            $foreignKey = $meta->getReflectionProperty($meta->getSingleIdentifierFieldName())->getValue($entity);
+            if ($entity instanceof TranslatableIdentifierInterface) {
+                $foreignKey = $entity->getTranslatableId();
+            } else {
+                $foreignKey = $meta->getReflectionProperty($meta->getSingleIdentifierFieldName())->getValue($entity);
+            }
             $objectClass = $config['useObjectClass'];
             $transMeta = $this->_em->getClassMetadata($class);
             $trans = $this->findOneBy(compact('locale', 'objectClass', 'field', 'foreignKey'));
