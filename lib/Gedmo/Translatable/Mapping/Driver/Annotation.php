@@ -40,6 +40,11 @@ class Annotation extends AbstractAnnotationDriver
     const LANGUAGE = 'Gedmo\\Mapping\\Annotation\\Language';
 
     /**
+     * Annotation to identity all fields from an entity to be translated
+     */
+    const FULLY_TRANSLATABLE = 'Gedmo\\Mapping\\Annotation\\FullyTranslatable';
+
+    /**
      * {@inheritDoc}
      */
     public function readExtendedMetadata($meta, array &$config)
@@ -65,12 +70,20 @@ class Annotation extends AbstractAnnotationDriver
             if ($translatable = $this->reader->getPropertyAnnotation($property, self::TRANSLATABLE)) {
                 $field = $property->getName();
                 if (!$meta->hasField($field)) {
-                    throw new InvalidMappingException("Unable to find translatable [{$field}] as mapped property in entity - {$meta->name}");
+                    throw new InvalidMappingException(
+                        "Unable to find translatable [{$field}] as mapped property in entity - {$meta->name}"
+                    );
                 }
                 // fields cannot be overrided and throws mapping exception
                 $config['fields'][] = $field;
                 if (isset($translatable->fallback)) {
                     $config['fallback'][$field] = $translatable->fallback;
+                }
+            } elseif ($this->reader->getClassAnnotation($class, self::FULLY_TRANSLATABLE)) {
+                $field = $property->getName();
+                // fields cannot be overrided and throws mapping exception
+                if (!in_array($field, $meta->identifier)) {
+                    $config['fields'][] = $field;
                 }
             }
             // locale property
