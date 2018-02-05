@@ -242,7 +242,16 @@ final class ORM extends BaseAdapterORM implements TranslatableAdapter
         $em = $this->getObjectManager();
         $wrapped = AbstractWrapper::wrap($object, $em);
         $meta = $wrapped->getMetadata();
-        $type = Type::getType($meta->getTypeOfField($field));
+
+        /**
+         * Store associations id into integer
+         */
+        if ($meta->hasAssociation($field)) {
+            $type = Type::INTEGER;
+        } else {
+            $type = $meta->getTypeOfField($field);
+        }
+        $type = Type::getType($type);
         if ($value === false) {
             $value = $wrapped->getPropertyValue($field);
         }
@@ -258,8 +267,21 @@ final class ORM extends BaseAdapterORM implements TranslatableAdapter
         $em = $this->getObjectManager();
         $wrapped = AbstractWrapper::wrap($object, $em);
         $meta = $wrapped->getMetadata();
-        $type = Type::getType($meta->getTypeOfField($field));
-        $value = $type->convertToPHPValue($value, $em->getConnection()->getDatabasePlatform());
+
+        /**
+         * For association fields, convert ID into object
+         */
+        if ($meta->hasAssociation($field)) {
+            $type = Type::getType(Type::INTEGER);
+            $value = $type->convertToPHPValue($value, $em->getConnection()->getDatabasePlatform());
+            $association = $meta->getAssociationTargetClass($field);
+            $value = $em->find($association, $value);
+        } else {
+            $type = $meta->getTypeOfField($field);
+            $type = Type::getType($type);
+            $value = $type->convertToPHPValue($value, $em->getConnection()->getDatabasePlatform());
+        }
+
         $wrapped->setPropertyValue($field, $value);
     }
 
