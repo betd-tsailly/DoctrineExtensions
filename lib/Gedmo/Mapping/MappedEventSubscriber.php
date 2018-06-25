@@ -122,7 +122,7 @@ abstract class MappedEventSubscriber implements EventSubscriber
             $factory = $objectManager->getMetadataFactory();
             $cacheDriver = $factory->getCacheDriver();
             if ($cacheDriver) {
-                $cacheId = ExtensionMetadataFactory::getCacheId($class, $this->getNamespace());
+                $cacheId = ExtensionMetadataFactory::getCacheId($class, $this->getDriverNamespace());
                 if (($cached = $cacheDriver->fetch($cacheId)) !== false) {
                     self::$configurations[$this->name][$class] = $cached;
                     $config = $cached;
@@ -161,7 +161,7 @@ abstract class MappedEventSubscriber implements EventSubscriber
             }
             $this->extensionMetadataFactory[$oid] = new ExtensionMetadataFactory(
                 $objectManager,
-                $this->getNamespace(),
+                $this->getDriverNamespace(),
                 $this->annotationReader
             );
         }
@@ -209,12 +209,21 @@ abstract class MappedEventSubscriber implements EventSubscriber
 
     /**
      * Get the namespace of extension event subscriber.
-     * used for cache id of extensions also to know where
-     * to find Mapping drivers and event adapters
      *
      * @return string
      */
     abstract protected function getNamespace();
+
+    /**
+     * Get the namespace for cache id of extensions also to know where
+     * to find Mapping drivers and event adapters
+     *
+     * @return string
+     */
+    protected function getDriverNamespace()
+    {
+        return $this->getNamespace();
+    }
 
     /**
      * Create default annotation reader for extensions
@@ -260,10 +269,10 @@ abstract class MappedEventSubscriber implements EventSubscriber
 
         return self::$defaultAnnotationReader;
     }
-    
+
     /**
      * Sets the value for a mapped field
-     * 
+     *
      * @param AdapterInterface $adapter
      * @param object $object
      * @param string $field
@@ -275,7 +284,7 @@ abstract class MappedEventSubscriber implements EventSubscriber
         $manager = $adapter->getObjectManager();
         $meta = $manager->getClassMetadata(get_class($object));
         $uow = $manager->getUnitOfWork();
-        
+
         $meta->getReflectionProperty($field)->setValue($object, $newValue);
         $uow->propertyChanged($object, $field, $oldValue, $newValue);
         $adapter->recomputeSingleObjectChangeSet($uow, $meta, $object);
