@@ -633,6 +633,9 @@ class TranslatableListener extends MappedEventSubscriber
                     $translation->setObjectClass($config['useObjectClass']);
                     $translation->setForeignKey($objectId);
                 }
+                if ($translation instanceof ExtendedTranslationEntityInterface) {
+                    $translation->setExtendedProperties($config);
+                }
             }
 
             if ($translation) {
